@@ -32,6 +32,7 @@ import sqlite3
 import json
 from typing import Optional
 from fastmcp import FastMCP
+import os
 
 import os as _os
 DB_PATH = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "gst_data.db")
@@ -350,4 +351,5 @@ if __name__ == "__main__":
         print("Run first:  python load_from_excel.py", file=sys.stderr)
         exit(1)
     print(f"GST MCP Server starting, DB: {DB_PATH}", file=sys.stderr)
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")
