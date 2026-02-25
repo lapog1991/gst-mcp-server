@@ -35,38 +35,34 @@ Adds 3 tools to Claude:
 ### 1. Install Python dependencies
 
 ```bash
-cd gst-mcp
 pip install -r requirements.txt
 ```
 
 ### 2. Build the database
 
 ```bash
-python setup_db.py
+python load_from_excel.py
 ```
 
 This will:
-- Try to download the official CBIC HSN master Excel
-- If download fails, load the built-in seed dataset (good for prototyping)
+- Parse `GST_dataset_for_MCP.xlsx` (Notification 09/2025-CT(Rate), 22 Sept 2025)
+- Merge HSN levels from `GST_CGST_Rates_Clean.xlsx`
+- Load 1500 rows with 1194 unique HSN codes into `gst_data.db`
+- Run 24 spot checks automatically to verify data integrity
 
-**For production — manual data download (recommended):**
-1. Go to https://cbic-gst.gov.in/gst-goods-services-rates.html
-2. Download the HSN/SAC master Excel
-3. Place it in this folder as `hsn_master.xlsx`
-4. Run `python setup_db.py` — it will parse it automatically
+You should see at the end:
+```
+✅  All spot checks passed — database is ready!
+    Next step:  python server.py
+```
 
-### 3. Test the server
+### 3. Run the server
 
 ```bash
 python server.py
 ```
 
-You should see:
-```
-Starting GST Rate Lookup MCP Server...
-Database: gst_data.db
-Ready for connections.
-```
+That's it! Two steps and you're live.
 
 ---
 
@@ -74,7 +70,7 @@ Ready for connections.
 
 Edit your Claude Desktop config file:
 
-**Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`  
 **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
@@ -82,7 +78,7 @@ Edit your Claude Desktop config file:
   "mcpServers": {
     "gst-lookup": {
       "command": "python",
-      "args": ["/full/path/to/gst-mcp/server.py"]
+      "args": ["/full/path/to/server.py"]
     }
   }
 }
@@ -94,23 +90,30 @@ Restart Claude Desktop. You'll see "gst-lookup" appear in the tools menu.
 
 ## Making it public (remote MCP server)
 
+### Update server.py for remote hosting
+
+Change the last line in `server.py` from:
+```python
+mcp.run()
+```
+To:
+```python
+mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+```
+
 ### Deploy to Render (free)
 
 1. Push this repo to GitHub
 2. Go to render.com → New → Web Service
 3. Connect your GitHub repo
 4. Set:
-   - **Build command:** `pip install -r requirements.txt && python setup_db.py`
+   - **Build command:** `pip install -r requirements.txt && python load_from_excel.py`
    - **Start command:** `python server.py`
-5. Deploy → get your URL e.g. `https://gst-mcp.onrender.com`
+5. Deploy → get your public URL e.g. `https://gst-mcp.onrender.com`
 
-### Update server.py for remote hosting
+### Connect via Claude.ai
 
-Add this to `server.py` before `mcp.run()`:
-
-```python
-mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
-```
+Go to **Claude.ai → Settings → Integrations → Add MCP Server** and paste your URL.
 
 ### Claude Desktop config for remote server
 
@@ -141,22 +144,33 @@ Once deployed, submit your server to:
 GST rates change when the GST Council meets (roughly every 3-6 months).
 
 To update:
-1. Download latest HSN master from CBIC website
-2. Place as `hsn_master.xlsx` in this folder
-3. Run `python setup_db.py` → choose `y` to rebuild
+1. Download the latest notification Excel from the CBIC website
+2. Replace `GST_dataset_for_MCP.xlsx` in this folder
+3. Run `python load_from_excel.py` → choose `y` to rebuild
 4. Redeploy
+
+---
+
+## Data source
+
+Built from **Notification 09/2025-CT(Rate), dated 22 September 2025** — the most recent GST rate revision.
+
+- 1500 rows loaded
+- 1194 unique HSN codes
+- 24 spot checks passing including edge cases (OR-conditions, cess items, NIL entries)
 
 ---
 
 ## Project structure
 
 ```
-gst-mcp/
-├── server.py          # MCP server — 3 tools
-├── setup_db.py        # Database builder from CBIC data
-├── gst_data.db        # SQLite database (generated)
-├── requirements.txt   # Python dependencies
-└── README.md          # This file
+gst-mcp-server/
+├── server.py                    # MCP server — 3 tools
+├── load_from_excel.py           # Database builder from Excel data
+├── gst_data.db                  # SQLite database (generated)
+├── GST_dataset_for_MCP.xlsx     # Source data (Notification 09/2025)
+├── requirements.txt             # Python dependencies
+└── README.md                    # This file
 ```
 
 ---
@@ -165,7 +179,7 @@ gst-mcp/
 
 - **FastMCP** — Python MCP server framework
 - **SQLite** — local database, zero config
-- **pandas** — Excel parsing for CBIC data
+- **pandas** — Excel parsing
 - **Data source** — CBIC (Central Board of Indirect Taxes and Customs)
 
 ---
@@ -176,4 +190,4 @@ MIT — free to use, modify, and publish.
 
 ---
 
-*Built for India 🇮🇳 — solving real problems with open government data.*
+*Built for India 🇮🇳 — solving real GST classification problems with open government data.*
