@@ -1,0 +1,9 @@
+__pycache__/ 
+*.pyc 
+gst_ready_reckoner.pdf 
+hsn_master.xlsx 
+GST_CGST_Rates_Clean.xlsx 
+Diagnose.py 
+inspect_db.py 
+parse_reckoner.py 
+gst/ 
